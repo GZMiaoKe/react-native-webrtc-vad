@@ -2,7 +2,7 @@
   "name": "react-native-webrtc-vad",
   "version": "1.1.8",
   "description": "",
-  "main": "index.js",
+  "main": "src/index",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -12,9 +12,6 @@
   "author": "",
   "license": "",
   "peerDependencies": {
-    "react-native": "0.57.8"
-  },
-  "devDependencies": {
-    "react-native": "0.57.8"
+    "react-native": "*"
   }
 }
