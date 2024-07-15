@@ -17,7 +17,7 @@ public class AudioInputController {
     }
 
     public static final int AudioChannelConfig = AudioFormat.CHANNEL_IN_MONO;
-    public static final int AudioSampleFormat = AudioFormat.ENCODING_PCM_8BIT;
+    public static final int AudioSampleFormat = AudioFormat.ENCODING_PCM_16BIT;
 
 
     private AudioInputControllerListener listener;

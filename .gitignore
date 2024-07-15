@@ -65,6 +65,7 @@ build/
 .gradle
 local.properties
 *.iml
+.cxx/
 
 # node.js
 #
