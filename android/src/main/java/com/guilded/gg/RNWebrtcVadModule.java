@@ -97,6 +97,16 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         promise.resolve(this.stopVAD());
     }
 
+    @ReactMethod
+    public void addListener(String eventName) {
+        // Keep this method here for compatibility with the JS side
+    }
+
+    @ReactMethod
+    public void removeListeners(int count) {
+        // Keep this method here for compatibility with the JS side
+    }
+
     private String stopVAD() {
         if (BuildConfig.DEBUG) {
             Log.d(getName(), "Stopping");
