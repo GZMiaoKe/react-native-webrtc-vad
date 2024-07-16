@@ -32,7 +32,7 @@ const VADRecorder = {
   start: (options: VADOptions) => RNWebrtcVad.start(options),
   stop: () => RNWebrtcVad.stop(),
   audioDeviceSettings: () => RNWebrtcVad.audioDeviceSettings(),
-  addUpdateListener: (cb: (e: { isVoice: number | boolean }) => void) => {
+  addUpdateListener: (cb: (e: { isVoice: boolean }) => void) => {
     return RNWebrtcVadEmitter.addListener(
       EventTypeToNativeEventName.speakingUpdate,
       cb,

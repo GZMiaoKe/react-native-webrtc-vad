@@ -110,7 +110,7 @@ RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromi
         // Convert to short pointer
         const int16_t* audioSample = (const int16_t*) [self.audioData bytes];
 
-        int isVoice = [voiceDetector isVoice:audioSample sample_rate:sampleRate length:chunkSizeBytes/2];
+        BOOL isVoice = [voiceDetector isVoice:audioSample sample_rate:sampleRate length:chunkSizeBytes/2];
 
         // write to fileURL
         if (_fileURL != nil) {
