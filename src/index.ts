@@ -6,6 +6,7 @@ const RNWebrtcVadEmitter = new NativeEventEmitter(RNWebrtcVad);
 
 export type VADOptions = {
   mode?: 0 | 1 | 2 | 3;
+  preferredBufferSize?: number;
 };
 
 export type VADDeviceSettings = {
@@ -17,7 +18,7 @@ declare module 'react-native' {
   interface NativeModulesStatic {
     RNWebrtcVad: {
       start(options: VADOptions): void;
-      stop(): void;
+      stop(): Promise<string>;
       audioDeviceSettings(): Promise<VADDeviceSettings>;
     } & NativeModule;
   }

@@ -22,23 +22,34 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options)
         preferredBufferSize = [options[@"preferredBufferSize"] intValue];
     }
 
+    // cache dir
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+    NSString *cachesDir = [paths objectAtIndex:0];
+    _fileURL = [cachesDir stringByAppendingPathComponent:@"vad.pcm"];
+
+    // remove old file if already exist
+    [[NSFileManager defaultManager] removeItemAtPath:_fileURL error:nil];
+
     voiceDetector = [[VoiceActivityDetector alloc] initWithMode:mode];
     AudioInputController *inputController = [AudioInputController sharedInstance];
 
     // If not specified, will match HW sample, which could be too high.
     // Ex: Most devices run at 48000,41000 (or 48kHz/44.1hHz). So cap at highest vad supported sample rate supported
     // See: https://github.com/TeamGuilded/react-native-webrtc-vad/blob/master/webrtc/common_audio/vad/include/webrtc_vad.h#L75
-    [inputController prepareWithSampleRate:32000 preferredBufferSize:preferredBufferSize];
+    [inputController prepareWithSampleRate:16000 preferredBufferSize:preferredBufferSize];
 
     [inputController start];
 }
 
-RCT_EXPORT_METHOD(stop) {
+RCT_EXPORT_METHOD(stop:(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
     NSLog(@"[WebRTCVad] stopping");
 
     [[AudioInputController sharedInstance] stop];
     voiceDetector = nil;
     self.audioData = nil;
+    NSString *fileURL = self.fileURL;
+    self.fileURL = nil;
+    resolve(fileURL);
 }
 
 RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
@@ -74,6 +85,7 @@ RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromi
 - (void) dealloc {
     voiceDetector = nil;
     self.audioData = nil;
+    self.fileURL = nil;
 }
 
 - (void) processSampleData:(NSData *)data
@@ -100,6 +112,17 @@ RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromi
 
         int isVoice = [voiceDetector isVoice:audioSample sample_rate:sampleRate length:chunkSizeBytes/2];
 
+        // write to fileURL
+        if (_fileURL != nil) {
+            NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:_fileURL];
+            if (fileHandle == nil) {
+                [[NSFileManager defaultManager] createFileAtPath:_fileURL contents:nil attributes:nil];
+                fileHandle = [NSFileHandle fileHandleForWritingAtPath:_fileURL];
+            }
+            [fileHandle seekToEndOfFile];
+            [fileHandle writeData:self.audioData];
+            [fileHandle closeFile];
+        }
 
         // Clear audio buffer
         [self.audioData setLength:0];

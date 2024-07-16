@@ -1,6 +1,7 @@
 
 package com.guilded.gg;
 
+import android.annotation.SuppressLint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -48,6 +49,7 @@ public class AudioInputController {
         return this.bufferSize;
     }
 
+    @SuppressLint("MissingPermission")
     public void start() {
         recorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, sampleRate,
                 AudioInputController.AudioChannelConfig, AudioInputController.AudioSampleFormat, bufferSize);

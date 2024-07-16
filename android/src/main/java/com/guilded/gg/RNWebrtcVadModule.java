@@ -13,6 +13,8 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.soloader.SoLoader;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
@@ -22,6 +24,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
     private final ReactApplicationContext reactContext;
     private double cumulativeProcessedSampleLengthMs = 0;
     private short[] audioData;
+    private String filePath;
     private int audioDataOffset;
 
     private static boolean disableInputController = false;
@@ -65,13 +68,21 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
             }
         }
 
+        // set file path to "vad.pcm" in cache directory
+        filePath = reactContext.getCacheDir().getAbsolutePath() + "/vad.pcm";
+        // if file exists, delete it
+        File file = new File(filePath);
+        if (file.exists()) {
+            file.delete();
+        }
+
         RNWebrtcVadModule.initializeVad(mode);
         final AudioInputController inputController = AudioInputController.getInstance();
 
         // If not specified, will match HW sample, which could be too high.
         // Ex: Most devices run at 48000,41000 (or 48kHz/44.1hHz). So cap at highest vad supported sample rate supported
         // See: https://github.com/TeamGuilded/react-native-webrtc-vad/blob/master/webrtc/common_audio/vad/include/webrtc_vad.h#L75
-        inputController.prepareWithSampleRate(32000, preferredBufferSize);
+        inputController.prepareWithSampleRate(16000, preferredBufferSize);
 
         if (!this.disableInputController) {
             inputController.setAudioInputControllerListener(this);
@@ -82,7 +93,11 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
     }
 
     @ReactMethod
-    public void stop() {
+    public void stop(Promise promise) {
+        promise.resolve(this.stopVAD());
+    }
+
+    private String stopVAD() {
         if (BuildConfig.DEBUG) {
             Log.d(getName(), "Stopping");
         }
@@ -92,6 +107,9 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         inputController.stop();
         inputController.setAudioInputControllerListener(null);
         audioData = null;
+        String path = filePath;
+        filePath = null;
+        return path;
     }
 
     @ReactMethod
@@ -120,7 +138,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         if (BuildConfig.DEBUG) {
             Log.d(getName(), "Audio sample processing error. Stopping VAD: " + error);
         }
-        stop();
+        stopVAD();
     }
 
     @Override
@@ -154,6 +172,24 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
 
         if (audioDataOffset == audioData.length) {
             audioDataOffset = 0;
+
+            // append data to file (little endian)
+            try {
+              File file = new File(filePath);
+              if (!file.exists()) {
+                file.createNewFile();
+              }
+              FileOutputStream fos = new FileOutputStream(file, true);
+              for (int i = 0; i < audioData.length; i++) {
+                fos.write(audioData[i] & 0xff);
+                fos.write((audioData[i] >> 8) & 0xff);
+              }
+              fos.close();
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
+
+
 
             boolean isVoice = isVoice(audioData, sampleRate, chunkSize / 2);
 
