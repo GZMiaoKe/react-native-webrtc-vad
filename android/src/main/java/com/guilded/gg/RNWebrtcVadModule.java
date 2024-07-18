@@ -52,7 +52,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
     }
 
     @ReactMethod
-    public void start(ReadableMap options) {
+    public void start(ReadableMap options, Promise promise) {
         Log.d(getName(), "Starting");
 
         int mode = 0;
@@ -90,6 +90,8 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         } else {
             Log.d(getName(), "Internal audio recorder input controller disabled. You must manually call onProcessSampleData");
         }
+
+        promise.resolve(null);
     }
 
     @ReactMethod

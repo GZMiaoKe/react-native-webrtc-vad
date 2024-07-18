@@ -78,13 +78,15 @@
     @try {
         [self storeOriginalAudioSetup];
 
-        BOOL ok = [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
+        NSError *categoryErr;
+        BOOL ok = [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&categoryErr];
 
-        NSLog(@"[WebRTCVad] set category %d", ok);
+        NSLog(@"[WebRTCVad] set category %d, error %@", ok, categoryErr);
 
-        ok = [audioSession setMode:AVAudioSessionModeVoiceChat error:nil];
+        NSError *modeErr;
+        ok = [audioSession setMode:AVAudioSessionModeVoiceChat error:&modeErr];
 
-        NSLog(@"[WebRTCVad] set mode %d", ok);
+        NSLog(@"[WebRTCVad] set mode %d, error %@", ok, modeErr);
 
         // After a lot of trial and error, it was discovered that a 48khz
         // device would be fine with buffer durations that yield ~2049-4094

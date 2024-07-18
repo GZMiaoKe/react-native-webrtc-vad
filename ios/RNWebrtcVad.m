@@ -12,7 +12,7 @@
 
 RCT_EXPORT_MODULE()
 
-RCT_EXPORT_METHOD(start:(NSDictionary *)options)
+RCT_EXPORT_METHOD(start:(NSDictionary *)options :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject)
 {
     NSLog(@"[WebRTCVad] starting = %@", options);
     int mode = [options[@"mode"] intValue];
@@ -38,7 +38,14 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options)
     // See: https://github.com/TeamGuilded/react-native-webrtc-vad/blob/master/webrtc/common_audio/vad/include/webrtc_vad.h#L75
     [inputController prepareWithSampleRate:16000 preferredBufferSize:preferredBufferSize];
 
-    [inputController start];
+    OSStatus startStatus = [inputController start];
+    if (startStatus != noErr) {
+        NSString *errCode = [NSString stringWithFormat:@"%d", startStatus];
+        NSString *errMsg = [NSString stringWithFormat:@"[WebRTCVad] failed to start audio input controller with status %d", startStatus];
+        reject(errCode, errMsg, nil);
+    } else {
+        resolve(nil);
+    }
 }
 
 RCT_EXPORT_METHOD(stop:(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {

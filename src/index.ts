@@ -17,7 +17,7 @@ export type VADDeviceSettings = {
 declare module 'react-native' {
   interface NativeModulesStatic {
     RNWebrtcVad: {
-      start(options: VADOptions): void;
+      start(options: VADOptions): Promise<void>;
       stop(): Promise<string>;
       audioDeviceSettings(): Promise<VADDeviceSettings>;
     } & NativeModule;
