@@ -11,5 +11,5 @@
 
 @interface RNWebrtcVad : RCTEventEmitter <RCTBridgeModule, AudioInputControllerDelegate>
 @property (nonatomic, strong) NSMutableData *audioData;
-@property (nonatomic, strong) NSString *fileURL;
+@property (nonatomic, strong) NSMutableData *cumulativeAudioData;
 @end

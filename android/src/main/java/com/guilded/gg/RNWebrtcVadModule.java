@@ -24,7 +24,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
     private final ReactApplicationContext reactContext;
     private double cumulativeProcessedSampleLengthMs = 0;
     private short[] audioData;
-    private String filePath;
+    private short[] cumulativeAudioData;
     private int audioDataOffset;
 
     private static boolean disableInputController = false;
@@ -68,14 +68,6 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
             }
         }
 
-        // set file path to "vad.pcm" in cache directory
-        filePath = reactContext.getCacheDir().getAbsolutePath() + "/vad.pcm";
-        // if file exists, delete it
-        File file = new File(filePath);
-        if (file.exists()) {
-            file.delete();
-        }
-
         RNWebrtcVadModule.initializeVad(mode);
         final AudioInputController inputController = AudioInputController.getInstance();
 
@@ -95,8 +87,8 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
     }
 
     @ReactMethod
-    public void stop(Promise promise) {
-        promise.resolve(this.stopVAD());
+    public void stop(Boolean discard, Promise promise) {
+        promise.resolve(this.stopVAD(discard));
     }
 
     @ReactMethod
@@ -109,7 +101,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         // Keep this method here for compatibility with the JS side
     }
 
-    private String stopVAD() {
+    private String stopVAD(Boolean discard) {
         if (BuildConfig.DEBUG) {
             Log.d(getName(), "Stopping");
         }
@@ -118,10 +110,30 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         AudioInputController inputController = AudioInputController.getInstance();
         inputController.stop();
         inputController.setAudioInputControllerListener(null);
+
+        // set file path to "vad.pcm" in cache directory
+        String filePath = reactContext.getCacheDir().getAbsolutePath() + "/vad.pcm";
+
+        if (!discard) {
+          // append data to file (little endian)
+            try {
+                File file = new File(filePath);
+                if (!file.exists()) {
+                  file.createNewFile();
+                }
+                FileOutputStream fos = new FileOutputStream(file, false);
+                for (int i = 0; i < cumulativeAudioData.length; i++) {
+                  fos.write(cumulativeAudioData[i] & 0xff);
+                  fos.write((cumulativeAudioData[i] >> 8) & 0xff);
+                }
+                fos.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         audioData = null;
-        String path = filePath;
-        filePath = null;
-        return path;
+        cumulativeAudioData = null;
+        return discard ? null : filePath;
     }
 
     @ReactMethod
@@ -150,7 +162,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         if (BuildConfig.DEBUG) {
             Log.d(getName(), "Audio sample processing error. Stopping VAD: " + error);
         }
-        stopVAD();
+        stopVAD(true);
     }
 
     @Override
@@ -185,23 +197,15 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         if (audioDataOffset == audioData.length) {
             audioDataOffset = 0;
 
-            // append data to file (little endian)
-            try {
-              File file = new File(filePath);
-              if (!file.exists()) {
-                file.createNewFile();
-              }
-              FileOutputStream fos = new FileOutputStream(file, true);
-              for (int i = 0; i < audioData.length; i++) {
-                fos.write(audioData[i] & 0xff);
-                fos.write((audioData[i] >> 8) & 0xff);
-              }
-              fos.close();
-            } catch (Exception e) {
-              e.printStackTrace();
+            if (cumulativeAudioData == null) {
+                cumulativeAudioData = new short[audioData.length];
+                System.arraycopy(audioData, 0, cumulativeAudioData, 0, audioData.length);
+            } else {
+                short[] temp = new short[cumulativeAudioData.length + audioData.length];
+                System.arraycopy(cumulativeAudioData, 0, temp, 0, cumulativeAudioData.length);
+                System.arraycopy(audioData, 0, temp, cumulativeAudioData.length, audioData.length);
+                cumulativeAudioData = temp;
             }
-
-
 
             boolean isVoice = isVoice(audioData, sampleRate, chunkSize / 2);
 
@@ -226,7 +230,5 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
                         .emit("RNWebrtcVad_SpeakingUpdate", payload);
             }
         }
-
     }
-
 }

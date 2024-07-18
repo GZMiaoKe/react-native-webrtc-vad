@@ -22,14 +22,6 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options :(RCTPromiseResolveBlock)resolve
         preferredBufferSize = [options[@"preferredBufferSize"] intValue];
     }
 
-    // cache dir
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    NSString *cachesDir = [paths objectAtIndex:0];
-    _fileURL = [cachesDir stringByAppendingPathComponent:@"vad.pcm"];
-
-    // remove old file if already exist
-    [[NSFileManager defaultManager] removeItemAtPath:_fileURL error:nil];
-
     voiceDetector = [[VoiceActivityDetector alloc] initWithMode:mode];
     AudioInputController *inputController = [AudioInputController sharedInstance];
 
@@ -48,15 +40,31 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options :(RCTPromiseResolveBlock)resolve
     }
 }
 
-RCT_EXPORT_METHOD(stop:(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
+RCT_EXPORT_METHOD(stop:(BOOL)discard :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
     NSLog(@"[WebRTCVad] stopping");
+    
+    // cache dir
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+    NSString *cachesDir = [paths objectAtIndex:0];
+    NSString *filePath = [cachesDir stringByAppendingPathComponent:@"vad.pcm"];
+    if (!discard){
+        // remove old file if already exist
+        [[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+        
+        NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
+        if (fileHandle == nil) {
+            [[NSFileManager defaultManager] createFileAtPath:filePath contents:nil attributes:nil];
+            fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
+        }
+        [fileHandle writeData:self.cumulativeAudioData error:nil];
+        [fileHandle closeAndReturnError:nil];
+    }
 
     [[AudioInputController sharedInstance] stop];
     voiceDetector = nil;
     self.audioData = nil;
-    NSString *fileURL = self.fileURL;
-    self.fileURL = nil;
-    resolve(fileURL);
+    self.cumulativeAudioData = nil;
+    resolve(discard ? nil : filePath);
 }
 
 RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
@@ -92,7 +100,7 @@ RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromi
 - (void) dealloc {
     voiceDetector = nil;
     self.audioData = nil;
-    self.fileURL = nil;
+    self.cumulativeAudioData = nil;
 }
 
 - (void) processSampleData:(NSData *)data
@@ -116,20 +124,14 @@ RCT_EXPORT_METHOD(audioDeviceSettings:(RCTPromiseResolveBlock)resolve :(RCTPromi
     if ([self.audioData length] >= chunkSizeBytes) {
         // Convert to short pointer
         const int16_t* audioSample = (const int16_t*) [self.audioData bytes];
+        
+        // Cumulative audio data
+        if (self.cumulativeAudioData == nil){
+            self.cumulativeAudioData = [[NSMutableData alloc] init];
+        }
+        [self.cumulativeAudioData appendData:self.audioData];
 
         BOOL isVoice = [voiceDetector isVoice:audioSample sample_rate:sampleRate length:chunkSizeBytes/2];
-
-        // write to fileURL
-        if (_fileURL != nil) {
-            NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:_fileURL];
-            if (fileHandle == nil) {
-                [[NSFileManager defaultManager] createFileAtPath:_fileURL contents:nil attributes:nil];
-                fileHandle = [NSFileHandle fileHandleForWritingAtPath:_fileURL];
-            }
-            [fileHandle seekToEndOfFile];
-            [fileHandle writeData:self.audioData];
-            [fileHandle closeFile];
-        }
 
         // Clear audio buffer
         [self.audioData setLength:0];

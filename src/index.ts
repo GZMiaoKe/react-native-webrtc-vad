@@ -18,7 +18,7 @@ declare module 'react-native' {
   interface NativeModulesStatic {
     RNWebrtcVad: {
       start(options: VADOptions): Promise<void>;
-      stop(): Promise<string>;
+      stop(discard: boolean): Promise<string | null>;
       audioDeviceSettings(): Promise<VADDeviceSettings>;
     } & NativeModule;
   }
@@ -30,7 +30,7 @@ const EventTypeToNativeEventName = {
 
 const VADRecorder = {
   start: (options: VADOptions) => RNWebrtcVad.start(options),
-  stop: () => RNWebrtcVad.stop(),
+  stop: (discard = false) => RNWebrtcVad.stop(discard),
   audioDeviceSettings: () => RNWebrtcVad.audioDeviceSettings(),
   addUpdateListener: (cb: (e: { isVoice: boolean }) => void) => {
     return RNWebrtcVadEmitter.addListener(
