@@ -18,8 +18,8 @@ class RNWebrtcVad: RCTEventEmitter {
     var cumulativeProcessedSampleLengthMs: Double = 0
     var voiceDetector: VoiceActivityDetector!
     
-    var audioData: Data!
-    var cumulativeAudioData: Data!
+    var audioData: Data = Data()
+    var cumulativeAudioData: Data = Data()
     
     override func supportedEvents() -> [String]? {
         return ["RNWebrtcVad_SpeakingUpdate"]
@@ -54,6 +54,9 @@ class RNWebrtcVad: RCTEventEmitter {
         // See: https://github.com/TeamGuilded/react-native-webrtc-vad/blob/master/webrtc/common_audio/vad/include/webrtc_vad.h#L75
         inputController.prepare(withSampleRate: 16000, preferredBufferSize: preferredBufferSize)
         
+        audioData.removeAll()
+        cumulativeAudioData.removeAll()
+        
         let status = inputController.start()
         if (status != noErr) {
             reject("\(status)", "Failed to start audio input controller", nil)
@@ -67,24 +70,25 @@ class RNWebrtcVad: RCTEventEmitter {
         let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
         let fileURL = cacheDir.appendingPathComponent("vad.pcm")
         
-        var writeSuccess = false
+        var writeErrorMessage: String?
         if (!discard) {
             do {
                 try cumulativeAudioData.write(to: fileURL, options: [])
                 Log("Write file to \(fileURL)")
-                writeSuccess = true
             } catch {
                 Log("Failed to write file: \(error)")
-                reject("failed_to_write_file", "Failed to write file", error)
+                writeErrorMessage = error.localizedDescription
             }
         }
         
         AudioInputController.sharedInstance().stop()
         voiceDetector = nil
-        audioData = nil
-        cumulativeAudioData = nil
+        audioData.removeAll()
+        cumulativeAudioData.removeAll()
         if !discard {
-            if writeSuccess {
+            if let errMsg = writeErrorMessage {
+                reject(nil, errMsg, nil)
+            } else {
                 let filePath = fileURL.absoluteString.replacingOccurrences(of: "file://", with: "")
                 resolve(filePath)
             }
@@ -105,14 +109,7 @@ class RNWebrtcVad: RCTEventEmitter {
 
 extension RNWebrtcVad: AudioInputControllerDelegate {
     func processSampleData(_ data: Data!) {
-        if audioData == nil {
-            audioData = Data()
-        }
         audioData.append(data)
-        
-        if cumulativeAudioData == nil {
-            cumulativeAudioData = Data()
-        }
         cumulativeAudioData.append(data)
         
         let sampleRate = AudioInputController.sharedInstance().audioSampleRate
