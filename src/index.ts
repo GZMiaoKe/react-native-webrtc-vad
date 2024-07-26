@@ -18,7 +18,9 @@ declare module 'react-native' {
   interface NativeModulesStatic {
     RNWebrtcVad: {
       start(options: VADOptions): Promise<void>;
-      stop(discard: boolean): Promise<string | null>;
+      stop(
+        discard: boolean,
+      ): Promise<{ filePath: string; sampleRate: number } | null>;
       audioDeviceSettings(): Promise<VADDeviceSettings>;
     } & NativeModule;
   }

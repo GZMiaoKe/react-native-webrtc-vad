@@ -52,13 +52,14 @@ class RNWebrtcVad: RCTEventEmitter {
         // If not specified, will match HW sample, which could be too high.
         // Ex: Most devices run at 48000,41000 (or 48kHz/44.1hHz). So cap at highest vad supported sample rate supported
         // See: https://github.com/TeamGuilded/react-native-webrtc-vad/blob/master/webrtc/common_audio/vad/include/webrtc_vad.h#L75
-        inputController.prepare(withSampleRate: 16000, preferredBufferSize: preferredBufferSize)
+        inputController.prepare(withSampleRate: 32000, preferredBufferSize: preferredBufferSize)
         
         audioData.removeAll()
         cumulativeAudioData.removeAll()
         
         let status = inputController.start()
         if (status != noErr) {
+            Log("Failed to start audio input controller, status: \(status)")
             reject("\(status)", "Failed to start audio input controller", nil)
         } else {
             resolve(nil)
@@ -81,6 +82,7 @@ class RNWebrtcVad: RCTEventEmitter {
             }
         }
         
+        let sampleRate = AudioInputController.sharedInstance().audioSampleRate
         AudioInputController.sharedInstance().stop()
         voiceDetector = nil
         audioData.removeAll()
@@ -90,7 +92,7 @@ class RNWebrtcVad: RCTEventEmitter {
                 reject(nil, errMsg, nil)
             } else {
                 let filePath = fileURL.absoluteString.replacingOccurrences(of: "file://", with: "")
-                resolve(filePath)
+                resolve(["filePath": filePath, "sampleRate": sampleRate])
             }
         } else {
             resolve(nil)

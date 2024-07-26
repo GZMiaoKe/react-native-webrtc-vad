@@ -74,7 +74,7 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         // If not specified, will match HW sample, which could be too high.
         // Ex: Most devices run at 48000,41000 (or 48kHz/44.1hHz). So cap at highest vad supported sample rate supported
         // See: https://github.com/TeamGuilded/react-native-webrtc-vad/blob/master/webrtc/common_audio/vad/include/webrtc_vad.h#L75
-        inputController.prepareWithSampleRate(16000, preferredBufferSize);
+        inputController.prepareWithSampleRate(32000, preferredBufferSize);
 
         if (!this.disableInputController) {
             inputController.setAudioInputControllerListener(this);
@@ -101,13 +101,14 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         // Keep this method here for compatibility with the JS side
     }
 
-    private String stopVAD(Boolean discard) {
+    private WritableMap stopVAD(Boolean discard) {
         if (BuildConfig.DEBUG) {
             Log.d(getName(), "Stopping");
         }
 
         RNWebrtcVadModule.stopVad();
         AudioInputController inputController = AudioInputController.getInstance();
+        int sampleRate = inputController.sampleRate();
         inputController.stop();
         inputController.setAudioInputControllerListener(null);
 
@@ -133,7 +134,13 @@ public class RNWebrtcVadModule extends ReactContextBaseJavaModule implements Aud
         }
         audioData = null;
         cumulativeAudioData = null;
-        return discard ? null : filePath;
+        if (discard) {
+          return null;
+        }
+        WritableMap payload = Arguments.createMap();
+        payload.putString("filePath", filePath);
+        payload.putInt("sampleRate", sampleRate);
+        return payload;
     }
 
     @ReactMethod

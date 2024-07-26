@@ -46,10 +46,7 @@
     NSLog(@"[WebRTCVad] sampleRate = %f", desiredSampleRate);
 
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-
-    [audioSession setPreferredSampleRate:desiredSampleRate error:nil];
-
-    double sampleRate = audioSession.preferredSampleRate;
+    double sampleRate = audioSession.sampleRate;
 
     // The math in this library supports 48khz, 32khz, 16khz, and 8khz. In most
     // cases, we should expect that the hardware sampling rate is 48khz. In
