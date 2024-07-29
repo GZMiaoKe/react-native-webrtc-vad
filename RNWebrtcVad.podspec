@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.platform     = :ios, "9.0"
   s.source       = { :git => "https://github.com/TeamGuilded/react-native-webrtc-vad.git", :tag => "master" }
 
-  s.source_files  = "ios/**/*.{h,m}"
+  s.source_files  = "ios/**/*.{h,m,mm,swift}"
   s.framework    = "AVFoundation", "AudioToolbox"
   s.requires_arc = true
 
