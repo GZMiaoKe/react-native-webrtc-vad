@@ -76,7 +76,7 @@
         [self storeOriginalAudioSetup];
 
         NSError *categoryErr;
-        BOOL ok = [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&categoryErr];
+        BOOL ok = [audioSession setCategory:AVAudioSessionCategoryRecord error:&categoryErr];
 
         NSLog(@"[WebRTCVad] set category %d, error %@", ok, categoryErr);
 
